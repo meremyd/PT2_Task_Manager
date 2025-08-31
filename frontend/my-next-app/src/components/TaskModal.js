@@ -12,7 +12,6 @@ export default function TaskModal({ isOpen, onClose, onSave }) {
   const handleSave = () => {
     if (!title || !description || !dueDate) return;
 
-    // send data back to parent
     onSave({ title, description, dueDate });
     setTitle("");
     setDescription("");
