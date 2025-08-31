@@ -31,20 +31,13 @@ export default function Home() {
     }
   };
 
-  // add task
+  // add task (always pending)
   const handleAddTask = async (task) => {
-    const dueDate = new Date(task.dueDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let status = "pending";
-    if (dueDate.getTime() === today.getTime()) status = "in-progress";
-
     try {
       const res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...task, status }),
+        body: JSON.stringify({ ...task, status: "pending" }),
       });
       if (!res.ok) throw new Error("Failed to add task");
 
@@ -60,7 +53,7 @@ export default function Home() {
   const handleUpdateTask = async (updatedTask) => {
     try {
       const res = await fetch(`${API}/${updatedTask._id}`, {
-        method: "PATCH", // ✅ FIXED: use PATCH instead of PUT
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedTask),
       });
@@ -79,7 +72,7 @@ export default function Home() {
   const handleDeleteTask = async (id) => {
     Swal.fire({
       title: "Are you sure?",
-      text: "You won't be able to revert this!",
+      text: "You won't be able to undo this!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#e3342f",
@@ -98,9 +91,16 @@ export default function Home() {
     });
   };
 
-  // mark complete
+  // toggle complete / pending
   const handleCheckboxChange = (task) => {
-    handleUpdateTask({ ...task, status: "completed" });
+    const newStatus = task.status === "completed" ? "pending" : "completed";
+    handleUpdateTask({ ...task, status: newStatus });
+  };
+
+  // toggle in-progress / pending
+  const toggleInProgress = (task) => {
+    const newStatus = task.status === "in-progress" ? "pending" : "in-progress";
+    handleUpdateTask({ ...task, status: newStatus });
   };
 
   const filteredTasks = tasks.filter((task) => {
@@ -117,19 +117,18 @@ export default function Home() {
     today.setHours(0, 0, 0, 0);
 
     if (task.status === "completed") return "bg-green-200";
-    if (due.getTime() === today.getTime() && task.status !== "completed")
-      return "bg-orange-200";
-    if (due < today && task.status !== "completed") return "bg-red-200";
+    if (task.status === "in-progress") return "bg-orange-200";
+    if (due < today && task.status === "pending") return "bg-red-200";
     return "bg-yellow-100";
   };
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-50 p-6">
-      {/* Title outside card */}
+      {/* Title */}
       <h1 className="text-4xl font-bold text-yellow-600 mb-4">Task Manager</h1>
 
       <div className="w-full max-w-3xl bg-white shadow-xl rounded-2xl p-6">
-        {/* Add Task Button (below right of title) */}
+        {/* Add Task Button */}
         <div className="flex justify-end mb-6">
           <button
             onClick={() => setIsModalOpen(true)}
@@ -139,7 +138,7 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Search & Filter (sticky row) */}
+        {/* Search & Filter */}
         <div className="flex gap-3 mb-6 sticky top-0 bg-white py-2 z-10">
           <div className="flex items-center border rounded-lg flex-1 px-2">
             <Search size={18} className="text-gray-400" />
@@ -213,6 +212,19 @@ export default function Home() {
                       }
                       className="border p-1 rounded"
                     />
+                    {/* Toggle In Progress button */}
+                    <button
+                      onClick={() => toggleInProgress(editingTask)}
+                      className={`text-xs mt-2 px-2 py-1 rounded ${
+                        editingTask.status === "in-progress"
+                          ? "bg-yellow-300 text-gray-700"
+                          : "bg-yellow-500 text-white hover:bg-yellow-600"
+                      }`}
+                    >
+                      {editingTask.status === "in-progress"
+                        ? "Pending"
+                        : "In Progress"}
+                    </button>
                   </div>
                 ) : (
                   <div>
@@ -235,14 +247,6 @@ export default function Home() {
                       className="text-green-600"
                     >
                       <Check size={18} />
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleUpdateTask({ ...editingTask, status: "in-progress" })
-                      }
-                      className="text-yellow-600"
-                    >
-                      In Progress
                     </button>
                     <button
                       onClick={() => setEditingTask(null)}
